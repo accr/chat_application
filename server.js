@@ -13,12 +13,20 @@ var mime = require('mime'); // 附加的mime模块有根据文件扩展名得出
 
 var cache = {}; // cache是用来缓存文件内容的对象
 
+
+/*==========================
+  发送文件数据及错误响应
+  ==========================
+ */
+
+// 所请求的文件不存在时发送404错误
 function send404(response) {
     response.writeHead(404,{'Content-type':'text/plain'});
     response.write('Error 404:resource not found.');
     response.end();
 }
 
+// 提供文件数据服务
 function sendFile(response,filePath,fileContents) {
     response.writeHead(
         200,
@@ -27,9 +35,18 @@ function sendFile(response,filePath,fileContents) {
     response.end(fileContents);
 }
 
+
+/*==========================
+    访问内存（RAM）要比访问文件系统快得多
+    Node程序通常会把常用的数据缓存到内存里。
+    聊天程序把静态文件缓存到内存中，只有第一次访问的时候才会从文件系统读取
+  ==========================
+ */
+
+// 提供静态文件服务
 function serverStatic(response,cache,absPath) {
-    if(cache[absPath]){     //  检查文件是否缓存在内存中
-        senfFile(response,absPath,cache[absPath]);      //  从内存中返回文件
+    if(cache[absPath]){     // 检查文件是否缓存在内存中
+        senfFile(response,absPath,cache[absPath]);      // 从内存中返回文件
     }else {
         fs.exists(absPath,function (exists) {       // 检查文件是否存在
             if(exists){
@@ -62,10 +79,14 @@ var server = http.createServer(function(request,response) {
     serverStatic(response,cache,absPath);   // 返回静态文件
 });
 
+
+// 启动HTTP服务器
 server.listen(3000,function () {
      console.log("Server listening on port 3000.");
 });
 
+// 加载一个定制的Node模块，用来处理基于Socket.IO服务端聊天功能
 var chatServer = require('./lib/char_server');
 
+// 启动Socket.IO服务器
 chatServer.listen(server);
